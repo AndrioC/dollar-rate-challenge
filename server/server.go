@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type DollarRate struct {
@@ -34,16 +38,29 @@ func DollarRateQueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dollarRate, err := DollarRateQuery(ctx)
+	dollarData, err := DollarRateQuery(ctx)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	dollarDataJSON, err := json.Marshal(dollarData)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = InsertDollarRateRequest(dollarData.USDBRL.Bid)
+
+	if err != nil {
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(dollarRate)
+	w.Write(dollarDataJSON)
 
 }
 
@@ -80,5 +97,49 @@ func DollarRateQuery(ctx context.Context) (*DollarData, error) {
 	}
 
 	return &data, nil
+
+}
+
+func InsertDollarRateRequest(bid string) error {
+	insertDataCtx, insertDataCancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+
+	defer insertDataCancel()
+
+	db, err := sql.Open("sqlite3", "dollarrate.db")
+
+	if err != nil {
+		fmt.Printf("Error trying to create database: %v\n", err)
+		return err
+	}
+
+	defer db.Close()
+
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS dollarraterequests (
+						id INTEGER PRIMARY KEY AUTOINCREMENT,
+						bid TEXT,
+						created_at DATE DEFAULT CURRENT_TIMESTAMP
+					)`)
+
+	if err != nil {
+		fmt.Printf("Error while creating table: %v\n", err)
+		return err
+	}
+
+	stmt, err := db.PrepareContext(insertDataCtx, "INSERT INTO dollarraterequests (bid) VALUES (?)")
+
+	if err != nil {
+		fmt.Printf("Error inserting data: %v\n", err)
+		return err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.Exec(bid)
+	if err != nil {
+		fmt.Printf("Error while trying to save data: %v", err)
+		return err
+	}
+
+	return nil
 
 }

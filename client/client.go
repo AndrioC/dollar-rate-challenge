@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -37,11 +38,17 @@ func main() {
 
 	body, err := io.ReadAll(res.Body)
 
+	if len(body) == 0 {
+		fmt.Println("The response from server is empty")
+		return
+	}
+
 	if err != nil {
 		panic(err)
 	}
 
 	var dollarData DollarData
+
 	err = json.Unmarshal(body, &dollarData)
 	if err != nil {
 		panic(err)
