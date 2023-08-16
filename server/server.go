@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"time"
 )
 
 type DollarRate struct {
@@ -23,6 +24,10 @@ func main() {
 }
 
 func DollarRateQueryHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log.Println("Making request..")
+
+	defer log.Println("Request finished")
 	if r.URL.Path == "/" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -38,23 +43,33 @@ func DollarRateQueryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(dollarRate)
+
+	select {
+	case <-time.After(3 * time.Second):
+		log.Printf("Request successfully completed")
+		w.Write([]byte("Request successfully completed"))
+
+	case <-ctx.Done():
+		log.Printf("Request canceled by client")
+		w.Write([]byte("Request canceled by client"))
+	}
 }
 
 func DollarRateQuery() (*DollarData, error) {
 	req, err := http.Get(API_URL)
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+
 	defer req.Body.Close()
 	res, err := io.ReadAll(req.Body)
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var data DollarData
-	fmt.Println(string(res))
 
 	err = json.Unmarshal(res, &data)
 
