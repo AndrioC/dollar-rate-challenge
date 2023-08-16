@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -33,7 +34,7 @@ func DollarRateQueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dollarRate, err := DollarRateQuery()
+	dollarRate, err := DollarRateQuery(ctx)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -44,26 +45,27 @@ func DollarRateQueryHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(dollarRate)
 
-	select {
-	case <-time.After(3 * time.Second):
-		log.Printf("Request successfully completed")
-		w.Write([]byte("Request successfully completed"))
-
-	case <-ctx.Done():
-		log.Printf("Request canceled by client")
-		w.Write([]byte("Request canceled by client"))
-	}
 }
 
-func DollarRateQuery() (*DollarData, error) {
-	req, err := http.Get(API_URL)
+func DollarRateQuery(ctx context.Context) (*DollarData, error) {
+	ctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", API_URL, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	defer req.Body.Close()
-	res, err := io.ReadAll(req.Body)
+	res, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
 
 	if err != nil {
 		return nil, err
@@ -71,7 +73,7 @@ func DollarRateQuery() (*DollarData, error) {
 
 	var data DollarData
 
-	err = json.Unmarshal(res, &data)
+	err = json.Unmarshal(body, &data)
 
 	if err != nil {
 		return nil, err

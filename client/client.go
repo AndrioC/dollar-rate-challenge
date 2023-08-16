@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -17,7 +17,7 @@ type DollarData struct {
 }
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost:8080/cotacao", nil)
@@ -35,11 +35,15 @@ func main() {
 
 	defer res.Body.Close()
 
-	var dollarRate DollarData
-	err = json.NewDecoder(res.Body).Decode(&dollarRate)
+	body, err := io.ReadAll(res.Body)
+
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Dollar Bid: %s\n", dollarRate.USDBRL.Bid)
+	var dollarData DollarData
+	err = json.Unmarshal(body, &dollarData)
+	if err != nil {
+		panic(err)
+	}
 }
