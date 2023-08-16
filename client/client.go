@@ -25,13 +25,14 @@ func main() {
 	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost:8080/cotacao", nil)
 
 	if err != nil {
-		println(err)
+		fmt.Printf("Error while creating request: %v", err)
 		panic(err)
 	}
 
 	res, err := http.DefaultClient.Do(req)
 
 	if err != nil {
+		fmt.Printf("Error while sending request: %v", err)
 		panic(err)
 	}
 

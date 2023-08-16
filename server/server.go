@@ -72,10 +72,16 @@ func DollarRateQuery(ctx context.Context) (*DollarData, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", API_URL, nil)
 
 	if err != nil {
+		fmt.Printf("Error while creating request: %v", err)
 		return nil, err
 	}
 
 	res, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		fmt.Printf("Error while sending request: %v", err)
+		return nil, err
+	}
 
 	if err != nil {
 		return nil, err
