@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 )
 
 type DollarRate struct {
@@ -19,11 +18,29 @@ type DollarData struct {
 const API_URL = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
 
 func main() {
-	http.HandleFunc("/cotacao", handler)
+	http.HandleFunc("/cotacao", DollarRateQueryHandler)
 	http.ListenAndServe(":8080", nil)
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func DollarRateQueryHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	dollarRate, err := DollarRateQuery()
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(dollarRate)
+}
+
+func DollarRateQuery() (*DollarData, error) {
 	req, err := http.Get(API_URL)
 
 	if err != nil {
@@ -42,8 +59,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(res, &data)
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Erro ao fazer parse da resposta: %v\n", err)
+		return nil, err
 	}
 
-	fmt.Println(data.USDBRL.Bid)
+	return &data, nil
+
 }
