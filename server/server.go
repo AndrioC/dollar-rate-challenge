@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -101,11 +102,33 @@ func DollarRateQuery(ctx context.Context) (*DollarData, error) {
 }
 
 func InsertDollarRateRequest(bid string) error {
+	dbPath := "./db/main.db"
+
+	_, err := os.Stat(dbPath)
+
+	if os.IsNotExist(err) {
+		fmt.Println("database file not found, creating...")
+
+		err = os.MkdirAll("./db", os.ModePerm)
+
+		if err != nil {
+			return err
+		}
+
+		file, err := os.Create(dbPath)
+
+		if err != nil {
+			return err
+		}
+
+		file.Close()
+	}
+
 	insertDataCtx, insertDataCancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 
 	defer insertDataCancel()
 
-	db, err := sql.Open("sqlite3", "dollarrate.db")
+	db, err := sql.Open("sqlite3", dbPath)
 
 	if err != nil {
 		fmt.Printf("Error trying to create database: %v\n", err)

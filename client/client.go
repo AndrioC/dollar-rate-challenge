@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -53,4 +54,28 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	err = SaveDollarRateIntoFile(dollarData.USDBRL.Bid)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func SaveDollarRateIntoFile(bid string) error {
+	f, err := os.Create("cotacao.txt")
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	_, err = f.WriteString(fmt.Sprintf("Dólar: %v\n", bid))
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Erro ao escrever no arquivo: %v\n", err)
+		return err
+	}
+
+	return nil
 }
