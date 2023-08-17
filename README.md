@@ -26,7 +26,11 @@ There are two programs in this repository:
 
 ## How to run this project?
 
-Run both in separate terminals and in the following order:
+First of all, you need to install the dependecy packages, run:
+
+**go mod tidy**
+
+Now you need to run both programs in separate terminals and in the following order:
 
 1. Run go run server/server.go
 2. Run go run client/client.go
